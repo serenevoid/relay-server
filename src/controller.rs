@@ -1,9 +1,10 @@
 use std::{thread, time::Duration};
 use serialport::{available_ports, Result, SerialPort};
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 
 pub const BAUD_RATE: u32 = 9600;
 
+#[derive(Debug)]
 pub struct SerialController {
     port: Box<dyn SerialPort>,
 }
@@ -24,22 +25,22 @@ impl SerialController {
         };
     }
 
-    pub fn write(&mut self, data: u16) -> Result<u16, io::Error> {
+    pub fn write(&mut self, data: u16) -> Result<u16> {
         let message = format!("{}\n", data);
 
         if let Err(e) = self.port.write_all(message.as_bytes()) {
             eprintln!("Failed to write to port: {}", e);
-            return Err(e);
+            return Err(serialport::Error { kind: (serialport::ErrorKind::Unknown), description: (String::from("Failed to write to port")) });
         }
 
-        thread::sleep(Duration::from_secs(2)); // Allow time for Arduino to respond
+        thread::sleep(Duration::from_secs(2));
 
         let mut buffer = [0u8; 128];
         let bytes_read = match self.port.read(&mut buffer) {
             Ok(n) => n,
             Err(e) => {
                 eprintln!("Failed to read from port: {}", e);
-                return Err(e);
+                return Err(serialport::Error { kind: (serialport::ErrorKind::Unknown), description: (String::from("Failed to read from port")) });
             }
         };
 
@@ -50,7 +51,7 @@ impl SerialController {
             Ok(num) => Ok(num),
             Err(e) => {
                 eprintln!("Failed to parse number from response: {}", e);
-                Err(io::Error::new(io::ErrorKind::InvalidData, e))
+                return Err(serialport::Error { kind: (serialport::ErrorKind::InvalidInput), description: (String::from("Failed to parse response"))});
             }
         }
     }
