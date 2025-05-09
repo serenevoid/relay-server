@@ -1,6 +1,12 @@
-use std::{thread, time::Duration};
 use serialport::{available_ports, Result, SerialPort};
-use std::io::{Read, Write};
+use std::{
+    io::{Read, Write},
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration
+};
+
+static mut SERIAL_PORT: Option<Arc<Mutex<Option<Box<dyn SerialPort + Send>>>>> = None;
 
 pub const BAUD_RATE: u32 = 9600;
 
@@ -10,14 +16,16 @@ pub struct SerialController {
 }
 
 impl SerialController {
-    pub fn open_port() -> Result<Self> {
+    pub fn open_port() {
         let serial_result = serialport::new(get_port_address(), BAUD_RATE)
             .timeout(Duration::from_secs(2))
             .open();
 
         match serial_result {
             Ok(port) => {
-                return Ok(SerialController {port} );
+                unsafe {
+                    SERIAL_PORT = Some(Arc::new(Mutex::new(Some(port))));
+                }
             },
             Err(e) => {
                 panic!("Failed to open port: {}", e);
@@ -25,10 +33,10 @@ impl SerialController {
         };
     }
 
-    pub fn write(&mut self, data: u16) -> Result<u16> {
+    pub fn write(data: u16) -> Result<u16> {
         let message = format!("{}\n", data);
 
-        if let Err(e) = self.port.write_all(message.as_bytes()) {
+        if let Err(e) = SERIAL_PORT.unwrap().write_all(message.as_bytes()) {
             eprintln!("Failed to write to port: {}", e);
             return Err(serialport::Error { kind: (serialport::ErrorKind::Unknown), description: (String::from("Failed to write to port")) });
         }
