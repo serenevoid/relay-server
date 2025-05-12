@@ -93,7 +93,7 @@ async fn serve_data_handler(State(state): State<SharedJson>) -> impl IntoRespons
 
 async fn receive_data_handler(State(state): State<SharedJson>, Json(updated_item): Json<Item>) -> impl IntoResponse {
     let mut data = state.lock().unwrap();
-    let mut status_code = None;
+    let status_code: Option<StatusCode>;
     if let Some(existing_item) = data.relays.iter_mut().find(|item| item.id == updated_item.id) {
         existing_item.name = updated_item.name;
         existing_item.ipv4 = updated_item.ipv4;

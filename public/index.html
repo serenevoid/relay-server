@@ -1,59 +1,149 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>EXOR RELAY CONTROL</title>
+    <title>Relay Control: EXOR-Kochi</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
   <body>
-    <div>
-      <h1>EXOR Kochi - Relay Control</h1>
-      <div id="deck">
+    <div class="flex h-screen">
+      <div class="flex flex-col flex-1 overflow-hidden">
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
+          <div class="container px-6 py-8 mx-auto">
+            <h3 class="text-3xl font-bold underline text-gray-700">Relay Dashboard</h3>
+
+            <div class="flex flex-col mt-8">
+              <div class="py-2 -my-2 overflow-x-auto sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div
+                  class="inline-block min-w-full overflow-hidden align-middle border-b border-gray-200 shadow sm:rounded-lg">
+                  <table class="min-w-full">
+                    <thead>
+                      <tr>
+                        <th
+                          class="px-6 py-3 text-xs font-medium leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                          Relay</th>
+                        <th
+                          class="px-6 py-3 text-xs font-medium leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                          User</th>
+                        <th
+                          class="px-6 py-3 text-xs font-medium leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                          Panel</th>
+                        <th
+                          class="px-6 py-3 text-xs font-medium leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                          IP</th>
+                        <th
+                          class="px-6 py-3 text-xs font-medium leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                          Status</th>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50"></th>
+                      </tr>
+                    </thead>
+
+                    <tbody id="list-item" class="bg-white">
+                      <tr>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                          <div class="text-sm leading-5 text-gray-900">1</div>
+                        </td>
+
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                          <div class="text-sm leading-5 text-gray-900">Aju</div>
+                        </td>
+
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                          <div class="text-sm leading-5 text-gray-900">UN83</div>
+                        </td>
+
+                        <td class="px-6 py-4 text-sm leading-5 text-gray-500 whitespace-no-wrap border-b border-gray-200">10.8.32.119</td>
+
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                          <span
+                            class="inline-flex px-2 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full">Active</span>
+                        </td>
+
+                        <td
+                          class="px-6 py-4 text-sm font-medium leading-5 text-right whitespace-no-wrap border-b border-gray-200">
+                          <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
-      <button onclick="sendData()">SendData</button>
+    </div>
+    <div class="z-10 hidden">
+      <Card className="w-[350px]">
+        <CardHeader>
+          <CardTitle>Create project</CardTitle>
+          <CardDescription>Deploy your new project in one-click.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form>
+            <div className="grid w-full items-center gap-4">
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="name">User</Label>
+                <Input id="name" placeholder="Name of user" />
+              </div>
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="panel">Panel Type</Label>
+                <Input id="type" placeholder="Name of panel" />
+              </div>
+            </div>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline">Cancel</Button>
+          <Button>Deploy</Button>
+        </CardFooter>
+      </Card>
     </div>
     <script>
-      var data = null;
-      fetch("/data\.json")
+    var data = null;
+    fetch("/data\.json")
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("HTTP status:" + response.status);
+        }
+        return response.json();
+      })
+      .then(json => {
+        data = json;
+        document.getElementById("deck").innerHTML = data.toString();
+      })
+      .catch(e => {
+        console.error("Error: ", e)
+      });
+
+    function sendData() {
+      var payload = data["relays"][1];
+      payload.state = true;
+      payload.name = "Aju";
+      payload.panel_category = "UN83";
+      payload.ipv4 = "192.168.1.10";
+
+      fetch("/data.json", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
         .then(response => {
           if (!response.ok) {
-            throw new Error("HTTP status:" + response.status);
+            throw new Error("HTTP status: " + response.status);
           }
-          return response.json();
+          return response.json(); // Assuming server responds with JSON
         })
-        .then(json => {
-          data = json;
-          document.getElementById("deck").innerHTML = data.toString();
+        .then(data => {
+          console.log("Server response:", data);
         })
-        .catch(e => {
-          console.error("Error: ", e)
+        .catch(error => {
+          console.error("POST error:", error);
         });
-
-      function sendData() {
-        var payload = data["relays"][1];
-        payload.state = true;
-        payload.name = "Aju";
-        payload.panel_category = "UN83";
-        payload.ipv4 = "192.168.1.10";
-
-        fetch("/data.json", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error("HTTP status: " + response.status);
-            }
-            return response.json(); // Assuming server responds with JSON
-          })
-          .then(data => {
-            console.log("Server response:", data);
-          })
-          .catch(error => {
-            console.error("POST error:", error);
-          });
-      }
+    }
     </script>
   </body>
 </html>
