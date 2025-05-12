@@ -4,6 +4,56 @@
     <title>EXOR RELAY CONTROL</title>
   </head>
   <body>
-    <h1>EXOR Kochi - Relay Control</h1>
+    <div>
+      <h1>EXOR Kochi - Relay Control</h1>
+      <div id="deck">
+      </div>
+      <button onclick="sendData()">SendData</button>
+    </div>
+    <script>
+      var data = null;
+      fetch("/data\.json")
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("HTTP status:" + response.status);
+          }
+          return response.json();
+        })
+        .then(json => {
+          data = json;
+          document.getElementById("deck").innerHTML = data.toString();
+        })
+        .catch(e => {
+          console.error("Error: ", e)
+        });
+
+      function sendData() {
+        var payload = data["relays"][1];
+        payload.state = true;
+        payload.name = "Aju";
+        payload.panel_category = "UN83";
+        payload.ipv4 = "192.168.1.10";
+
+        fetch("/data.json", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error("HTTP status: " + response.status);
+            }
+            return response.json(); // Assuming server responds with JSON
+          })
+          .then(data => {
+            console.log("Server response:", data);
+          })
+          .catch(error => {
+            console.error("POST error:", error);
+          });
+      }
+    </script>
   </body>
 </html>

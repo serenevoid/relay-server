@@ -1,5 +1,4 @@
 mod controller;
-use controller::SerialController;
 
 use axum::{
     body::Body,
@@ -29,7 +28,7 @@ struct Item {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct States {
-    items: Vec<Item>,
+    relays: Vec<Item>,
 }
 
 type SharedJson = Arc<Mutex<States>>;
@@ -41,8 +40,6 @@ const CONFIG_PATH: &str = "./data.json";
 async fn main() {
     let data = load_or_init_json(CONFIG_PATH);
     let state = Arc::new(Mutex::new(data));
-
-    SerialController::open_port();
 
     let app = Router::new()
         .route("/", get(serve_index))
@@ -58,9 +55,9 @@ async fn main() {
 fn load_or_init_json(path: &str) -> States {
     if Path::new(path).exists() {
         let contents = fs::read_to_string(path).unwrap_or_else(|_| "{}".into());
-        serde_json::from_str(&contents).unwrap_or_else(|_| States { items: vec![] })
+        serde_json::from_str(&contents).unwrap_or_else(|_| States { relays: vec![] })
     } else {
-        States { items: (1..=10)
+        States { relays: (1..=10)
             .map(|i| Item {
                 id: i,
                 name: String::from("user"),
@@ -91,23 +88,25 @@ async fn serve_index() -> impl IntoResponse {
 
 async fn serve_data_handler(State(state): State<SharedJson>) -> impl IntoResponse {
     let data = state.lock().unwrap();
-    axum::Json(data.clone())
+    Json(data.clone())
 }
 
 async fn receive_data_handler(State(state): State<SharedJson>, Json(updated_item): Json<Item>) -> impl IntoResponse {
     let mut data = state.lock().unwrap();
-    if let Some(existing_item) = data.items.iter_mut().find(|item| item.id == updated_item.id) {
+    let mut status_code = None;
+    if let Some(existing_item) = data.relays.iter_mut().find(|item| item.id == updated_item.id) {
         existing_item.name = updated_item.name;
         existing_item.ipv4 = updated_item.ipv4;
         existing_item.panel_category = updated_item.panel_category;
         existing_item.state = updated_item.state;
-        SerialController::write("101");
         if let Err(e) = save_json(&data) {
             eprintln!("Error saving data to file: {}", e);
             return StatusCode::INTERNAL_SERVER_ERROR;
         }
-        StatusCode::OK
+        status_code = Some(StatusCode::OK);
     } else {
-        StatusCode::NOT_FOUND
+        status_code = Some(StatusCode::NOT_FOUND);
     }
+    println!("{}", controller::set_relays(101).unwrap());
+    status_code.unwrap()
 }
