@@ -12,7 +12,6 @@
         <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
           <div class="container px-6 py-8 mx-auto">
             <h3 class="text-3xl font-bold underline text-gray-700">Relay Dashboard</h3>
-
             <div class="flex flex-col mt-8">
               <div class="py-2 -my-2 overflow-x-auto sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
                 <div
@@ -39,30 +38,28 @@
                       </tr>
                     </thead>
 
-                    <tbody id="list-item" class="bg-white">
-                      <tr>
+                    <tbody id="list" class="bg-white">
+                      <tr id="list-item" class="hidden">
                         <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
-                          <div class="text-sm leading-5 text-gray-900">1</div>
+                          <div class="text-sm leading-5 text-gray-900">{id}</div>
                         </td>
 
                         <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
-                          <div class="text-sm leading-5 text-gray-900">Aju</div>
+                          <div class="text-sm leading-5 text-gray-900">{username}</div>
                         </td>
 
                         <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
-                          <div class="text-sm leading-5 text-gray-900">UN83</div>
+                          <div class="text-sm leading-5 text-gray-900">{panel_category}</div>
                         </td>
 
-                        <td class="px-6 py-4 text-sm leading-5 text-gray-500 whitespace-no-wrap border-b border-gray-200">10.8.32.119</td>
+                        <td class="px-6 py-4 text-sm leading-5 text-gray-500 whitespace-no-wrap border-b border-gray-200">{ipv4}</td>
 
                         <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
-                          <span
-                            class="inline-flex px-2 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full">Active</span>
+                          <span class="inline-flex px-2 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full">{state}</span>
                         </td>
 
-                        <td
-                          class="px-6 py-4 text-sm font-medium leading-5 text-right whitespace-no-wrap border-b border-gray-200">
-                          <a href="#" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                          <button onclick="edit({id})" class="inline-flex px-2 text-xs font-semibold leading-5 text-blue-800 bg-blue-100 rounded-full">Edit</button>
                         </td>
                       </tr>
                     </tbody>
@@ -74,35 +71,40 @@
         </main>
       </div>
     </div>
-    <div class="z-10 hidden">
-      <Card className="w-[350px]">
-        <CardHeader>
-          <CardTitle>Create project</CardTitle>
-          <CardDescription>Deploy your new project in one-click.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form>
-            <div className="grid w-full items-center gap-4">
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="name">User</Label>
-                <Input id="name" placeholder="Name of user" />
-              </div>
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="panel">Panel Type</Label>
-                <Input id="type" placeholder="Name of panel" />
-              </div>
-            </div>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline">Cancel</Button>
-          <Button>Deploy</Button>
-        </CardFooter>
-      </Card>
+    <div id="dialog" class="fixed inset-0 flex items-center justify-center bg-black/30 hidden">
+      <div class="justify-content text-sm text-center text-gray-800 bg-white shadow-[0px_4px_25px_0px_#0000000D] px-4 py-8 md:px-10 md:py-10 m-1 rounded-lg">
+        <h1 class="md:text-2xl text-xl font-semibold">Relay {id}</h1>
+        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-4/5 max-w-md">
+          <input class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="user" placeholder="Enter your name">
+        </div>
+        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-4/5 max-w-md">
+          <input class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="panel" placeholder="Enter panel category">
+        </div>
+        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-4/5 max-w-md">
+          <input class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="ip" placeholder="Enter panel IP">
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">
+          <input type="checkbox" class="sr-only peer" />
+          <div class="w-12 h-7 bg-slate-300 rounded-full peer peer-checked:bg-indigo-600 transition-colors duration-200"></div>
+          <span class="dot absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5"></span>
+          Power
+        </label>
+        <div class="grid grid-cols-2 px-8 mt-8 gap-5">
+          <button id="cancel" onclick="close()" type="button" class="border border-gray-300 py-2 rounded hover:bg-red-600 hover:border-red-600 hover:text-white transition">
+            Cancel
+          </button>
+          <button id="submit" type="button" class="bg-indigo-500 text-white hover:bg-indigo-600/90 transition py-2 rounded">
+            Submit
+          </button>
+        </div>
+      </div>
     </div>
     <script>
     var data = null;
-    fetch("/data\.json")
+    const list = document.getElementById("list");
+    const itemTemplate = document.getElementById("list-item");
+    const dialog = document.getElementById("dialog");
+    fetch("/data.json")
       .then(response => {
         if (!response.ok) {
           throw new Error("HTTP status:" + response.status);
@@ -110,12 +112,31 @@
         return response.json();
       })
       .then(json => {
-        data = json;
-        document.getElementById("deck").innerHTML = data.toString();
+        data = json.relays;
+        for (var i = 0; i < data.length; i++) {
+          const newItem = itemTemplate.cloneNode(true);
+          newItem.innerHTML = newItem.innerHTML.replaceAll("{id}", data[i].id);
+          newItem.innerHTML = newItem.innerHTML.replace("{username}", data[i].name);
+          newItem.innerHTML = newItem.innerHTML.replace("{panel_category}", data[i].panel_category);
+          newItem.innerHTML = newItem.innerHTML.replace("{ipr4}", data[i].ipv4);
+          newItem.innerHTML = newItem.innerHTML.replace("{state}", data[i].state ? "Active" : "Inactive");
+          newItem.innerHTML = newItem.innerHTML.replaceAll("red", data[i].state ? "green" : "red");
+          newItem.classList.remove("hidden");
+          list.appendChild(newItem);
+        }
       })
       .catch(e => {
         console.error("Error: ", e)
       });
+
+    function edit(id) {
+      dialog.classList.remove("hidden");
+      dialog.innerHTML = dialog.innerHTML.replace("{id}", id);
+    }
+
+    function close() {
+      dialog.classList.add("hidden");
+    }
 
     function sendData() {
       var payload = data["relays"][1];
