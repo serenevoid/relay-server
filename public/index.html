@@ -74,26 +74,26 @@
     <div id="dialog" class="fixed inset-0 flex items-center justify-center bg-black/30 hidden">
       <div class="justify-content text-sm text-center text-gray-800 bg-white shadow-[0px_4px_25px_0px_#0000000D] px-4 py-8 md:px-10 md:py-10 m-1 rounded-lg">
         <h1 class="md:text-2xl text-xl font-semibold">Relay {id}</h1>
-        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-4/5 max-w-md">
-          <input class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="user" placeholder="Enter your name">
+        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-64 max-w-lg">
+          <input id="user" class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="text" placeholder="Enter your name">
         </div>
-        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-4/5 max-w-md">
-          <input class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="panel" placeholder="Enter panel category">
+        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-64 max-w-lg">
+          <input id="panel_category" class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="text" placeholder="Enter panel category">
         </div>
-        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-4/5 max-w-md">
-          <input class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="ip" placeholder="Enter panel IP">
+        <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-64 max-w-lg">
+          <input id="ipv4" class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="text" placeholder="Enter panel IP">
         </div>
         <label class="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">
-          <input type="checkbox" class="sr-only peer" />
+          <input id="status" type="checkbox" class="sr-only peer" />
           <div class="w-12 h-7 bg-slate-300 rounded-full peer peer-checked:bg-indigo-600 transition-colors duration-200"></div>
           <span class="dot absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-5"></span>
           Power
         </label>
         <div class="grid grid-cols-2 px-8 mt-8 gap-5">
-          <button id="cancel" onclick="close()" type="button" class="border border-gray-300 py-2 rounded hover:bg-red-600 hover:border-red-600 hover:text-white transition">
+          <button id="cancel" onclick="cancel()" type="button" class="border border-gray-300 py-2 rounded hover:bg-red-400 hover:border-red-400 hover:text-white transition">
             Cancel
           </button>
-          <button id="submit" type="button" class="bg-indigo-500 text-white hover:bg-indigo-600/90 transition py-2 rounded">
+          <button id="submit" onclick="submit({id})" type="button" class="bg-indigo-400 text-white hover:bg-indigo-600 transition py-2 rounded">
             Submit
           </button>
         </div>
@@ -104,48 +104,81 @@
     const list = document.getElementById("list");
     const itemTemplate = document.getElementById("list-item");
     const dialog = document.getElementById("dialog");
-    fetch("/data.json")
-      .then(response => {
-        if (!response.ok) {
-          throw new Error("HTTP status:" + response.status);
-        }
-        return response.json();
-      })
-      .then(json => {
-        data = json.relays;
-        for (var i = 0; i < data.length; i++) {
-          const newItem = itemTemplate.cloneNode(true);
-          newItem.innerHTML = newItem.innerHTML.replaceAll("{id}", data[i].id);
-          newItem.innerHTML = newItem.innerHTML.replace("{username}", data[i].name);
-          newItem.innerHTML = newItem.innerHTML.replace("{panel_category}", data[i].panel_category);
-          newItem.innerHTML = newItem.innerHTML.replace("{ipr4}", data[i].ipv4);
-          newItem.innerHTML = newItem.innerHTML.replace("{state}", data[i].state ? "Active" : "Inactive");
-          newItem.innerHTML = newItem.innerHTML.replaceAll("red", data[i].state ? "green" : "red");
-          newItem.classList.remove("hidden");
-          list.appendChild(newItem);
-        }
-      })
-      .catch(e => {
-        console.error("Error: ", e)
-      });
+    const POLL_TIMEOUT_MS = 60000;
 
-    function edit(id) {
-      dialog.classList.remove("hidden");
-      dialog.innerHTML = dialog.innerHTML.replace("{id}", id);
+    // itemTemplate.classList.remove("hidden");
+
+    document.addEventListener('DOMContentLoaded', () => { startLongPolling(true); });
+
+    function startLongPolling(isInitial) {
+      fetch(isInitial ? "/data?initial_event" : "/data", {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Long-Poll': 'true'
+        },
+      })
+        .then(response => {
+          if (response.ok) {
+            data = await response.json().relays;
+            return true;
+          } else if (response.status === 204) {
+            console.log('No new data (server timeout)');
+            return false;
+          } else {
+            console.error(`Server error: ${response.status} - ${response.statusText}`);
+            throw new Error("Long Polling status:" + response.status);
+          }
+        })
+        .then(isChanged => {
+          if (isChanged) renderList();
+        })
+        .catch(async e => {
+          console.error('Long polling request failed:', error);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        })
+        .finally(() => {
+          startLongPolling(false);
+        });
     }
 
-    function close() {
+    function renderList() {
+      for (var i = 0; i < data.length; i++) {
+        const newItem = itemTemplate.cloneNode(true);
+        newItem.innerHTML = newItem.innerHTML.replaceAll("{id}", data[i].id);
+        newItem.innerHTML = newItem.innerHTML.replace("{username}", data[i].name);
+        newItem.innerHTML = newItem.innerHTML.replace("{panel_category}", data[i].panel_category);
+        newItem.innerHTML = newItem.innerHTML.replace("{ipv4}", data[i].ipv4);
+        newItem.innerHTML = newItem.innerHTML.replace("{state}", data[i].state ? "Active" : "Inactive");
+        newItem.innerHTML = newItem.innerHTML.replaceAll("red", data[i].state ? "green" : "red");
+        newItem.classList.remove("hidden");
+        list.appendChild(newItem);
+      }
+    }
+    function edit(id) {
+      dialog.classList.remove("hidden");
+      dialog.innerHTML = dialog.innerHTML.replaceAll("{id}", id);
+    }
+
+    function cancel() {
       dialog.classList.add("hidden");
     }
 
-    function sendData() {
-      var payload = data["relays"][1];
-      payload.state = true;
-      payload.name = "Aju";
-      payload.panel_category = "UN83";
-      payload.ipv4 = "192.168.1.10";
+    function submit(id) {
+      var payload = data["relays"][id];
+      payload.state = document.getElementById("status").checked;
+      if (payload.state == true) {
+        payload.name = document.getElementById("name").value;
+        payload.panel_category = document.getElementById("panel_category").value;
+        payload.ipv4 = document.getElementById("ipv4").value;
+      } else {
+        payload.name = "";
+        payload.panel_category = "";
+        payload.ipv4 = "";
+      }
 
-      fetch("/data.json", {
+      fetch("/data", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -156,10 +189,9 @@
           if (!response.ok) {
             throw new Error("HTTP status: " + response.status);
           }
-          return response.json(); // Assuming server responds with JSON
+          return response.json();
         })
         .then(data => {
-          console.log("Server response:", data);
         })
         .catch(error => {
           console.error("POST error:", error);
