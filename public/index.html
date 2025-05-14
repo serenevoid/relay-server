@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
-  <body>
+  <body class="font-mono">
     <div class="flex h-screen">
       <div class="flex flex-col flex-1 overflow-hidden">
         <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
@@ -75,7 +75,7 @@
       <div class="justify-content text-sm text-center text-gray-800 bg-white shadow-[0px_4px_25px_0px_#0000000D] px-4 py-8 md:px-10 md:py-10 m-1 rounded-lg">
         <h1 class="md:text-2xl text-xl font-semibold">Relay {id}</h1>
         <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-64 max-w-lg">
-          <input id="user" class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="text" placeholder="Enter your name">
+          <input id="name" class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="text" placeholder="Enter your name">
         </div>
         <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-64 max-w-lg">
           <input id="panel_category" class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="text" placeholder="Enter panel category">
@@ -121,20 +121,25 @@
       })
         .then(response => {
           if (response.ok) {
-            data = await response.json().relays;
-            return true;
+            return response.json();
           } else if (response.status === 204) {
             console.log('No new data (server timeout)');
-            return false;
+            return null;
           } else {
             console.error(`Server error: ${response.status} - ${response.statusText}`);
             throw new Error("Long Polling status:" + response.status);
           }
         })
-        .then(isChanged => {
-          if (isChanged) renderList();
+        .then(json => {
+          if (json.hasOwnProperty("relays")) {
+            data = json.relays;
+          }
+          else if (json.hasOwnProperty("updated_item")) {
+            data[json.updated_item.id - 1] = json.updated_item;
+          }
+          renderList();
         })
-        .catch(async e => {
+        .catch(async error => {
           console.error('Long polling request failed:', error);
           await new Promise(resolve => setTimeout(resolve, 2000));
         })
@@ -144,6 +149,7 @@
     }
 
     function renderList() {
+      while(list.firstChild) list.firstChild.remove();
       for (var i = 0; i < data.length; i++) {
         const newItem = itemTemplate.cloneNode(true);
         newItem.innerHTML = newItem.innerHTML.replaceAll("{id}", data[i].id);
@@ -166,7 +172,7 @@
     }
 
     function submit(id) {
-      var payload = data["relays"][id];
+      var payload = data[id - 1];
       payload.state = document.getElementById("status").checked;
       if (payload.state == true) {
         payload.name = document.getElementById("name").value;
@@ -188,10 +194,9 @@
         .then(response => {
           if (!response.ok) {
             throw new Error("HTTP status: " + response.status);
+          } else {
+            cancel();
           }
-          return response.json();
-        })
-        .then(data => {
         })
         .catch(error => {
           console.error("POST error:", error);
