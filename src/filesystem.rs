@@ -1,5 +1,5 @@
 use std::{
-    fs, path::Path
+    fs, path::Path, time
 };
 use crate::server::{States, Item};
 
@@ -11,9 +11,10 @@ pub fn load_or_init_json(path: &str) -> States {
         States { relays: (1..=10)
             .map(|i| Item {
                 id: i,
-                name: String::from("user"),
-                panel_category: String::from("panel_category"),
+                name: String::from("-"),
+                panel_category: String::from("-"),
                 ipv4: String::from("-.-.-.-"),
+                last_updated: time::SystemTime::now(),
                 state: false
             })
             .collect()

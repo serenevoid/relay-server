@@ -55,7 +55,9 @@
                         <td class="px-6 py-4 text-sm leading-5 text-gray-500 whitespace-no-wrap border-b border-gray-200">{ipv4}</td>
 
                         <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
-                          <span class="inline-flex px-2 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full">{state}</span>
+                          <span class="inline-flex px-2 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full">
+                            {state}
+                          </span>
                         </td>
 
                         <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
@@ -73,7 +75,7 @@
     </div>
     <div id="dialog" class="fixed inset-0 flex items-center justify-center bg-black/30 hidden">
       <div class="justify-content text-sm text-center text-gray-800 bg-white shadow-[0px_4px_25px_0px_#0000000D] px-4 py-8 md:px-10 md:py-10 m-1 rounded-lg">
-        <h1 class="md:text-2xl text-xl font-semibold">Relay {id}</h1>
+        <h1 id="heading" class="md:text-2xl text-xl font-semibold">Relay {id}</h1>
         <div class="flex items-center text-sm bg-white h-8 border pl-2 mx-auto my-2 rounded border-gray-500/30 w-64 max-w-lg">
           <input id="name" class="px-2 w-full h-full outline-none text-gray-500 bg-transparent" type="text" placeholder="Enter your name">
         </div>
@@ -104,7 +106,6 @@
     const list = document.getElementById("list");
     const itemTemplate = document.getElementById("list-item");
     const dialog = document.getElementById("dialog");
-    const POLL_TIMEOUT_MS = 60000;
 
     // itemTemplate.classList.remove("hidden");
 
@@ -121,23 +122,26 @@
       })
         .then(response => {
           if (response.ok) {
+            if (response.status === 204) {
+              console.log('No new data (server timeout)');
+              return null;
+            }
             return response.json();
-          } else if (response.status === 204) {
-            console.log('No new data (server timeout)');
-            return null;
           } else {
             console.error(`Server error: ${response.status} - ${response.statusText}`);
             throw new Error("Long Polling status:" + response.status);
           }
         })
         .then(json => {
-          if (json.hasOwnProperty("relays")) {
-            data = json.relays;
+          if (json != null) {
+            if (json.hasOwnProperty("relays")) {
+              data = json.relays;
+            }
+            else if (json.hasOwnProperty("updated_item")) {
+              data[json.updated_item.id - 1] = json.updated_item;
+            }
+            renderList();
           }
-          else if (json.hasOwnProperty("updated_item")) {
-            data[json.updated_item.id - 1] = json.updated_item;
-          }
-          renderList();
         })
         .catch(async error => {
           console.error('Long polling request failed:', error);
@@ -165,10 +169,16 @@
     function edit(id) {
       dialog.classList.remove("hidden");
       dialog.innerHTML = dialog.innerHTML.replaceAll("{id}", id);
+      document.getElementById("status").checked = data[id - 1].state;
+      document.getElementById("name").value = (data[id - 1].state) ? data[id - 1].name : "";
+      document.getElementById("panel_category").value = (data[id - 1].state) ? data[id - 1].panel_category : "";
+      document.getElementById("ipv4").value = (data[id - 1].state) ? data[id - 1].ipv4 : "";
     }
 
     function cancel() {
       dialog.classList.add("hidden");
+      document.getElementById("heading").innerHTML = "Relay {id}";
+      document.getElementById("submit").onclick = "submit({id})";
     }
 
     function submit(id) {
@@ -179,9 +189,9 @@
         payload.panel_category = document.getElementById("panel_category").value;
         payload.ipv4 = document.getElementById("ipv4").value;
       } else {
-        payload.name = "";
-        payload.panel_category = "";
-        payload.ipv4 = "";
+        payload.name = "-";
+        payload.panel_category = "-";
+        payload.ipv4 = "-.-.-.-";
       }
 
       fetch("/data", {
@@ -194,12 +204,12 @@
         .then(response => {
           if (!response.ok) {
             throw new Error("HTTP status: " + response.status);
-          } else {
-            cancel();
           }
+          cancel();
         })
         .catch(error => {
           console.error("POST error:", error);
+          cancel();
         });
     }
     </script>

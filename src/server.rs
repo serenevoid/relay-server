@@ -4,7 +4,7 @@ use axum::{
 };
 use tokio::sync::{broadcast, Mutex};
 use std::{
-    fs, path::PathBuf, sync::Arc, time::Duration
+    fs, path::PathBuf, sync::Arc, time
 };
 use tower_http::services::ServeDir;
 use serde::{Serialize, Deserialize};
@@ -20,7 +20,8 @@ pub struct Item {
     pub name: String,
     pub panel_category: String,
     pub ipv4: String,
-    pub state: bool,
+    pub last_updated: time::SystemTime,
+    pub state: bool
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -78,7 +79,7 @@ async fn serve_data_handler(
         return (StatusCode::OK, Json(data.clone())).into_response();
     }
     let mut rx = state.tx.subscribe();
-    let poll_timeout = Duration::from_secs(60);
+    let poll_timeout = time::Duration::from_secs(60);
 
     let event_future = async {
         loop {
@@ -115,18 +116,28 @@ async fn receive_data_handler(
     let mut item_updated = false;
     let mut status_code = Some(StatusCode::NOT_FOUND);
     let mut updated_item_for_event: Option<Item> = None;
-    let mut relay_state: u16 = 0;
     for item in &mut data.relays {
         if item.id == updated_item.id {
-            item.name = updated_item.name.clone();
-            item.ipv4 = updated_item.ipv4.clone();
-            item.panel_category = updated_item.panel_category.clone();
-            item.state = updated_item.state;
-            updated_item_for_event = Some(updated_item.clone());
-            item_updated = true;
-        }
-        if item.state {
-            relay_state |= 1 << (item.id - 1);
+            let now = time::SystemTime::now();
+            match now.duration_since(item.last_updated) {
+                Ok(duration) if duration > time::Duration::from_secs(10) => {
+                    if updated_item.state {
+                        item.name = updated_item.name.clone();
+                        item.ipv4 = updated_item.ipv4.clone();
+                        item.panel_category = updated_item.panel_category.clone();
+                    } else {
+                        item.name = "-".to_string();
+                        item.ipv4 = "-.-.-.-".to_string();
+                        item.panel_category = "-".to_string();
+                    }
+                    item.state = updated_item.state;
+                    item.last_updated = time::SystemTime::now();
+                    updated_item_for_event = Some(updated_item.clone());
+                    item_updated = true;
+                },
+                Ok(_) => println!("Less than 10 seconds. Skipping relay {}...", item.id),
+                Err(e) => eprintln!("System time went backwards: {:?}", e),
+            }
         }
     };
     if item_updated {
@@ -141,6 +152,6 @@ async fn receive_data_handler(
             status_code = Some(StatusCode::OK);
         }
     }
-    controller::set_relays(relay_state).unwrap();
+    controller::set_relays(&data).unwrap();
     status_code.unwrap()
 }

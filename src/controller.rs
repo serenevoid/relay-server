@@ -7,6 +7,8 @@ use std::{
 };
 use once_cell::sync::Lazy;
 
+use crate::server::States;
+
 static SERIAL_CONTROLLER: Lazy<Arc<Mutex<Option<SerialController>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));
 
 pub const BAUD_RATE: u32 = 9600;
@@ -69,8 +71,7 @@ fn get_port_address() -> String {
     match available_ports() {
         Ok(ports) => {
             for port in ports {
-                if port.port_name.contains("ttyUSB") {
-                    println!("{}", port.port_name);
+                if port.port_name.contains("ttyACM") {
                     return String::from(port.port_name);
                 }
             }
@@ -82,15 +83,22 @@ fn get_port_address() -> String {
     panic!("Serial device not found.")
 }
 
-pub fn set_relays(states: u16) -> Result<u16> {
+pub fn set_relays(data: &States) -> Result<bool> {
+    let mut relay_state: u16 = 0;
+    for item in &data.relays {
+        if item.state {
+            relay_state |= 1 << (item.id - 1);
+        }
+    };
     let mut controller_lock = SERIAL_CONTROLLER.lock().unwrap();
 
     if controller_lock.is_none() {
         *controller_lock = Some(SerialController::open_port().unwrap());
+        thread::sleep(Duration::from_secs(12));
     }
 
     if let Some(controller) = controller_lock.as_mut() {
-        controller.write(states)
+        Ok(relay_state == controller.write(relay_state).unwrap())
     } else {
         Err(serialport::Error::new(
             serialport::ErrorKind::Unknown,
