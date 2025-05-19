@@ -71,7 +71,7 @@ fn get_port_address() -> String {
     match available_ports() {
         Ok(ports) => {
             for port in ports {
-                if port.port_name.contains("ttyACM") {
+                if port.port_name.contains("COM8") {
                     return String::from(port.port_name);
                 }
             }
