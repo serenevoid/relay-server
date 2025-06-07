@@ -12,7 +12,6 @@ pub fn load_or_init_json(path: &str) -> States {
             .map(|i| Item {
                 id: i,
                 name: String::from("-"),
-                panel_category: String::from("-"),
                 ipv4: String::from("-.-.-.-"),
                 last_updated: time::SystemTime::now(),
                 state: false
