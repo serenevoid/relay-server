@@ -183,7 +183,7 @@ async fn scan_and_update_new_devices(state: Arc<AppState>, updated_item: Item) {
             let mut data = state.json_data.lock().await;
             for item in &mut data.relays {
                 if item.id == updated_item.id {
-                    item.ipv4 = ip.to_string();
+                    item.ipv4 = if updated_item.state { ip.to_string() } else { "-.-.-.-".to_string() };
                 }
             }
             let cloned_data = data.clone();
