@@ -10,7 +10,7 @@
   <body class="font-mono">
     <div class="flex h-screen">
       <div class="flex flex-col flex-1 overflow-hidden">
-        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
           <div class="container px-6 py-8 mx-auto">
             <h3 class="text-3xl font-bold underline text-gray-700">Relay Dashboard</h3>
             <div class="flex flex-col mt-8">
@@ -20,12 +20,12 @@
                   <table class="min-w-full">
                     <thead>
                       <tr>
-                        <th class="p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50"> Relay</th>
-                        <th class="p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50"> User</th>
-                        <th class="hidden sm:table-cell p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">IP Address</th>
-                        <th class="hidden sm:table-cell p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">Settings</th>
-                        <th class="p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50"> Status</th>
-                        <th class="sm:hidden p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50"> Info</th>
+                        <th class="p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-100"> Relay</th>
+                        <th class="p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-100"> User</th>
+                        <th class="hidden sm:table-cell p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-100">IP Address</th>
+                        <th class="hidden sm:table-cell p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-100">Settings</th>
+                        <th class="p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-100"> Status</th>
+                        <th class="sm:hidden p-4 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-100"> Info</th>
                       </tr>
                     </thead>
 
@@ -183,7 +183,7 @@
         payload.name = prompt("Enter your name:");
       } else {
         payload.name = "-";
-        payload.ip = "-.-.-.-";
+        payload.ipv4 = "-.-.-.-";
       }
 
       if (payload.name == null) {
